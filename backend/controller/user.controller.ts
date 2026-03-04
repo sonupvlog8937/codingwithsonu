@@ -5,7 +5,7 @@ import crypto from "crypto";
 import cloudinary from "../utils/cloudinary";
 import { generateVerificationCode } from "../utils/generateVerificationCode";
 import { generateToken } from "../utils/generateToken";
-import { sendPasswordResetEmail, sendResetSuccessEmail, sendVerificationEmail, sendWelcomeEmail } from "../mailtrap/email";
+import { sendPasswordResetEmail, sendResetSuccessEmail, sendVerificationEmail, sendWelcomeEmail } from "../mail/email";
 
 export const signup = async (req: Request, res: Response) => {
     try {
@@ -31,12 +31,18 @@ export const signup = async (req: Request, res: Response) => {
         })
         generateToken(res,user);
 
-        await sendVerificationEmail(email, verificationToken);
+        let signupMessage = "Account created successfully";
+        try {
+            await sendVerificationEmail(email, verificationToken);
+        } catch (emailError) {
+            console.error("Verification email send failed:", emailError);
+            signupMessage = "Account created, but verification email could not be sent right now.";
+        }
 
         const userWithoutPassword = await User.findOne({ email }).select("-password");
         return res.status(201).json({
             success: true,
-            message: "Account created successfully",
+             message: signupMessage,
             user: userWithoutPassword
         });
     } catch (error) {
